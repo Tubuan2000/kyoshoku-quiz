@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2c5f8d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="教職教養">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>教職教養 ランダム演習</title>
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --primary: #2c5f8d;
+    --primary-dark: #1e4566;
+    --accent: #e67e22;
+    --correct: #27ae60;
+    --wrong: #e74c3c;
+    --text: #2c3e50;
+    --muted: #7f8c8d;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+    background: linear-gradient(135deg, #d4e4f4 0%, #f0f4f8 60%, #e8f0e8 100%);
+    min-height: 100vh;
+    color: var(--text);
+    padding: 16px;
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    padding-left: calc(16px + env(safe-area-inset-left));
+    padding-right: calc(16px + env(safe-area-inset-right));
+  }
+  button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    font-family: inherit;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+  header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  header h1 { font-size: 1.5rem; color: var(--primary-dark); letter-spacing: 0.05em; }
+  header p { color: var(--muted); font-size: 0.85rem; margin-top: 6px; }
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(44, 95, 141, 0.12);
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+  .hidden { display: none !important; }
+
+  /* ===== start screen ===== */
+  .field-label { font-weight: bold; color: var(--primary-dark); margin: 18px 0 8px; font-size: 0.95rem; }
+  .option-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .option-grid button {
+    border: 2px solid var(--primary);
+    background: #fff;
+    color: var(--primary);
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .option-grid button.selected {
+    background: var(--primary);
+    color: #fff;
+  }
+  .start-btn, .restart-btn {
+    display: block;
+    width: 100%;
+    margin-top: 28px;
+    padding: 16px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent), #d35400);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.2s;
+    box-shadow: 0 4px 12px rgba(230, 126, 34, 0.4);
+  }
+  .start-btn:hover, .restart-btn:hover { transform: translateY(-2px); }
+  .note { font-size: 0.8rem; color: var(--muted); margin-top: 14px; line-height: 1.6; }
+
+  /* ===== stats ===== */
+  #stats-panel { margin-top: 4px; }
+  .stat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-size: 0.82rem; }
+  .stat-label { width: 124px; flex-shrink: 0; }
+  .stat-bar { flex: 1; height: 10px; background: #e8eef4; border-radius: 5px; overflow: hidden; }
+  .stat-bar > div { height: 100%; background: linear-gradient(90deg, var(--correct), #7dcea0); }
+  .stat-pct { width: 42px; text-align: right; color: var(--muted); }
+  .stat-sub { font-size: 0.78rem; color: var(--muted); margin: 6px 0 0; }
+  .reset-link { margin-top: 10px; background: none; border: none; color: var(--muted); font-size: 0.78rem; text-decoration: underline; cursor: pointer; }
+  .reset-link:hover { color: var(--wrong); }
+  .miss-note { margin-top: 8px; font-size: 0.78rem; color: var(--muted); }
+
+  /* ===== quiz screen ===== */
+  .quiz-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .category-tag {
+    background: var(--primary);
+    color: #fff;
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 0.78rem;
+  }
+  .progress-bar {
+    height: 6px;
+    background: #dfe6ee;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .progress-bar > div {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    width: 0%;
+    transition: width 0.3s;
+  }
+  .question-text {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    margin-bottom: 22px;
+    white-space: pre-wrap;
+  }
+  .question-text .blank {
+    background: #fff3e0;
+    border-bottom: 2px solid var(--accent);
+    padding: 0 6px;
+    font-weight: bold;
+    color: var(--accent);
+  }
+  .choices { display: flex; flex-direction: column; gap: 10px; }
+  .choice-btn {
+    text-align: left;
+    padding: 14px 16px;
+    border: 2px solid #cfdce8;
+    border-radius: 10px;
+    background: #fbfdff;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    display: flex;
+    gap: 10px;
+  }
+  @media (hover: hover) {
+    .choice-btn:hover:not(:disabled) { border-color: var(--primary); background: #eef5fb; }
+  }
+  .choice-btn:active:not(:disabled) { border-color: var(--primary); background: #eef5fb; }
+  .choice-btn:disabled { cursor: default; }
+  .choice-num {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+  }
+  .choice-btn.correct { border-color: var(--correct); background: #eafaf1; }
+  .choice-btn.correct .choice-num { background: var(--correct); }
+  .choice-btn.wrong { border-color: var(--wrong); background: #fdedec; }
+  .choice-btn.wrong .choice-num { background: var(--wrong); }
+  .choice-btn.dimmed { opacity: 0.5; }
+
+  .feedback {
+    margin-top: 20px;
+    border-radius: 10px;
+    padding: 16px;
+    line-height: 1.7;
+    font-size: 0.9rem;
+    animation: fadein 0.3s;
+  }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+  .feedback.ok { background: #eafaf1; border-left: 5px solid var(--correct); }
+  .feedback.ng { background: #fdedec; border-left: 5px solid var(--wrong); }
+  .feedback .verdict { font-weight: bold; font-size: 1.05rem; margin-bottom: 8px; }
+  .feedback.ok .verdict { color: var(--correct); }
+  .feedback.ng .verdict { color: var(--wrong); }
+  .next-btn {
+    display: block;
+    width: 100%;
+    margin-top: 18px;
+    padding: 14px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #fff;
+    background: var(--primary);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .next-btn:hover { background: var(--primary-dark); }
+
+  /* ===== result screen ===== */
+  .score-circle {
+    width: 150px; height: 150px;
+    border-radius: 50%;
+    margin: 10px auto 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: conic-gradient(var(--accent) calc(var(--pct) * 1%), #e8eef4 0);
+    position: relative;
+  }
+  .score-circle::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    background: var(--card);
+    border-radius: 50%;
+  }
+  .score-circle .inner { position: relative; text-align: center; }
+  .score-circle .pct { font-size: 2rem; font-weight: bold; color: var(--primary-dark); }
+  .score-circle .frac { font-size: 0.85rem; color: var(--muted); }
+  .result-msg { text-align: center; font-size: 1.05rem; font-weight: bold; margin-bottom: 20px; color: var(--primary-dark); }
+  .review-title { font-weight: bold; color: var(--primary-dark); margin: 24px 0 12px; }
+  .review-item {
+    border: 1px solid #e0e8f0;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
+  .review-item .q { font-weight: bold; margin-bottom: 6px; }
+  .review-item .a { color: var(--correct); }
+  .review-item .your { color: var(--wrong); }
+  .review-item .exp { color: var(--muted); margin-top: 6px; }
+  footer { text-align: center; color: var(--muted); font-size: 0.75rem; padding: 12px 0 24px; }
+
+  /* ===== スマホ（iPhone等）向け調整 ===== */
+  @media (max-width: 480px) {
+    header { padding: 12px 0 10px; }
+    header h1 { font-size: 1.25rem; }
+    .card { padding: 18px 16px; border-radius: 12px; }
+    .question-text { font-size: 0.98rem; line-height: 1.75; }
+    .choice-btn { padding: 13px 12px; font-size: 0.92rem; }
+    .option-grid button { padding: 9px 14px; font-size: 0.85rem; }
+    .start-btn, .restart-btn { padding: 15px; font-size: 1.05rem; }
+    .stat-label { width: 104px; font-size: 0.78rem; }
+    .score-circle { width: 130px; height: 130px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>📘 教職教養 ランダム演習</h1>
+    <p>教員採用試験対策 — 問題は毎回自動生成されます</p>
+  </header>
+
+  <!-- ===== START ===== -->
+  <div id="screen-start" class="card">
+    <div class="field-label">出題分野</div>
+    <div class="option-grid" id="field-select">
+      <button data-val="all" class="selected">全分野ミックス</button>
+      <button data-val="principle">教育原理・人物</button>
+      <button data-val="law">教育法規</button>
+      <button data-val="psych">教育心理</button>
+      <button data-val="history">教育史・時事用語</button>
+      <button data-val="tokyo">🗼 東京都</button>
+      <button data-val="weak">🔥 苦手重点</button>
+    </div>
+    <div class="field-label">問題数</div>
+    <div class="option-grid" id="count-select">
+      <button data-val="5">5問</button>
+      <button data-val="10" class="selected">10問</button>
+      <button data-val="20">20問</button>
+    </div>
+    <button class="start-btn" onclick="startQuiz()">演習をはじめる ▶</button>
+    <p class="note">※ 人物・法規条文・心理学用語などのデータベースから、出題形式と選択肢をその場でランダムに組み合わせて生成します。「🔥 苦手重点」では、過去に間違えた問題と誤答率の高い分野を優先して出題します（成績はこの端末に保存されます）。</p>
+    <div id="stats-panel"></div>
+  </div>
+
+  <!-- ===== QUIZ ===== -->
+  <div id="screen-quiz" class="card hidden">
+    <div class="quiz-top">
+      <span class="category-tag" id="q-category"></span>
+      <span id="q-progress-text"></span>
+    </div>
+    <div class="progress-bar"><div id="q-progress"></div></div>
+    <div class="question-text" id="q-text"></div>
+    <div class="choices" id="q-choices"></div>
+    <div id="q-feedback"></div>
+  </div>
+
+  <!-- ===== RESULT ===== -->
+  <div id="screen-result" class="card hidden">
+    <div class="score-circle" id="score-circle">
+      <div class="inner">
+        <div class="pct" id="score-pct"></div>
+        <div class="frac" id="score-frac"></div>
+      </div>
+    </div>
+    <div class="result-msg" id="result-msg"></div>
+    <div id="review-area"></div>
+    <button class="restart-btn" onclick="showStart()">🔄 新しい問題でもう一度</button>
+  </div>
+
+  <footer>問題はローカルで自動生成されています。実際の試験では最新の法令・学習指導要領をご確認ください。</footer>
+</div>
+
+<script>
+/* =========================================================
+   データベース
+========================================================= */
+
+// --- 教育思想家・人物 ---
+const PERSONS = [
+  {name:"コメニウス", country:"チェコ（モラヴィア）", desc:"「あらゆる人にあらゆる事柄を教える」汎知主義を唱え、世界最初の絵入り教科書とされる『世界図絵』を著した。直観教授の先駆者。", work:"大教授学・世界図絵", key:"直観教授・汎知主義"},
+  {name:"ルソー", country:"フランス（ジュネーヴ生）", desc:"「子どもの発見者」と呼ばれ、子どもの自然な成長に従う消極教育を主張した。「万物をつくる者の手をはなれるときすべてはよいものであるが…」の書き出しで知られる教育小説を著した。", work:"エミール", key:"消極教育・子どもの発見"},
+  {name:"ペスタロッチ", country:"スイス", desc:"孤児や貧民の教育に生涯を捧げ、直観を教育の基礎とするメトーデ（直観教授法）を確立した。「生活が陶冶する」の言葉でも知られる。", work:"隠者の夕暮・シュタンツだより", key:"直観教授・メトーデ"},
+  {name:"フレーベル", country:"ドイツ", desc:"世界最初の幼稚園（キンダーガルテン）を創設し、遊具「恩物」を考案した。遊びを通した幼児教育を重視した。", work:"人間の教育", key:"幼稚園の創設・恩物"},
+  {name:"ヘルバルト", country:"ドイツ", desc:"教育学を倫理学と心理学に基礎づけて体系化し、教授の過程を「明瞭・連合・系統・方法」の四段階で示した。教育的教授を主張した。", work:"一般教育学", key:"四段階教授法"},
+  {name:"デューイ", country:"アメリカ", desc:"シカゴ大学に実験学校を設け、「なすことによって学ぶ」経験主義教育・問題解決学習を提唱した。プラグマティズムの代表的思想家。", work:"学校と社会・民主主義と教育", key:"問題解決学習・経験主義"},
+  {name:"キルパトリック", country:"アメリカ", desc:"デューイの理論を発展させ、学習者が自ら目的を立てて遂行するプロジェクト・メソッド（構案法）を提唱した。", work:"プロジェクト・メソッド", key:"プロジェクト・メソッド"},
+  {name:"モンテッソーリ", country:"イタリア", desc:"ローマの貧民街に「子どもの家」を開設し、感覚教育を重視した独自の教具による教育法を確立した。医師出身の教育家。", work:"子どもの発見", key:"子どもの家・感覚教育"},
+  {name:"エレン・ケイ", country:"スウェーデン", desc:"20世紀は子どもが幸福に育つべき「児童の世紀」であると主張し、児童中心主義の教育を唱えた。", work:"児童の世紀", key:"児童中心主義"},
+  {name:"ブルーナー", country:"アメリカ", desc:"「どの教科でも、知的性格をそのままに保って、発達のどの段階の子どもにも効果的に教えることができる」と述べ、発見学習と教科の構造を重視した。", work:"教育の過程", key:"発見学習・教育の現代化"},
+  {name:"スキナー", country:"アメリカ", desc:"オペラント条件づけの理論に基づき、スモールステップと即時フィードバックによるプログラム学習を開発した。ティーチング・マシンでも知られる。", work:"プログラム学習", key:"オペラント条件づけ"},
+  {name:"ブルーム", country:"アメリカ", desc:"完全習得学習（マスタリー・ラーニング）を提唱し、診断的評価・形成的評価・総括的評価の区分を示した。教育目標の分類学でも知られる。", work:"完全習得学習", key:"マスタリー・ラーニング・形成的評価"},
+  {name:"ソクラテス", country:"古代ギリシャ", desc:"対話を通じて相手に無知を自覚させ、真理の発見へ導く問答法（産婆術）を用いた。「無知の知」で知られる。", work:"（著作なし・弟子プラトンが記録）", key:"問答法・産婆術"},
+  {name:"ロック", country:"イギリス", desc:"人の心は生まれたときは白紙（タブラ・ラサ）であり、経験によって観念が形成されると考えた。紳士教育論を展開した。", work:"教育に関する考察", key:"タブラ・ラサ・紳士教育"},
+  {name:"カント", country:"ドイツ", desc:"「人間は教育によってはじめて人間となることができる」と述べ、教育の必要性を強調した哲学者。", work:"教育学講義", key:"人間は教育によって人間となる"},
+  {name:"オーエン", country:"イギリス", desc:"ニュー・ラナークの紡績工場に幼児学校を設け、性格形成学院を創設した。環境が人間の性格を形成すると考えた空想的社会主義者。", work:"新社会観", key:"性格形成学院・幼児学校"},
+  {name:"シュタイナー", country:"オーストリア（ドイツで活動）", desc:"人智学に基づき自由ヴァルドルフ学校を創設した。8年間一貫担任制やエポック授業などの独自の教育方法で知られる。", work:"自由ヴァルドルフ学校", key:"ヴァルドルフ教育"},
+  {name:"ニイル", country:"イギリス", desc:"「世界で一番自由な学校」と呼ばれるサマーヒル・スクールを創設し、子どもの自由と自治を徹底的に尊重した。", work:"サマーヒル・スクール", key:"自由学校"},
+  {name:"福沢諭吉", country:"日本", desc:"「天は人の上に人を造らず」の書き出しで知られる著作で実学を奨励し、慶應義塾を創設した明治の啓蒙思想家。", work:"学問のすゝめ", key:"実学・慶應義塾"},
+  {name:"緒方洪庵", country:"日本", desc:"大坂に蘭学塾「適塾（適々斎塾）」を開き、福沢諭吉・大村益次郎ら幕末・明治の人材を多数育てた蘭方医。", work:"適塾", key:"適塾・蘭学"},
+  {name:"吉田松陰", country:"日本", desc:"長州萩の私塾「松下村塾」で高杉晋作・伊藤博文ら幕末維新の志士を育てた。", work:"松下村塾", key:"松下村塾"},
+  {name:"森有礼", country:"日本", desc:"初代文部大臣として1886年に学校令（帝国大学令・師範学校令・小学校令・中学校令）を公布し、近代学校制度の基礎を築いた。", work:"学校令の公布", key:"初代文部大臣"},
+  {name:"及川平治", country:"日本", desc:"明石女子師範学校附属小学校主事として「分団式動的教育法」を提唱し、大正自由教育運動を代表する実践を行った。", work:"分団式動的教育法", key:"大正自由教育"},
+  {name:"沢柳政太郎", country:"日本", desc:"成城小学校を創設し、大正自由教育運動の中心となった。「実際的教育学」を提唱した。", work:"成城小学校の創設", key:"大正自由教育・成城小学校"},
+  {name:"倉橋惣三", country:"日本", desc:"東京女子高等師範学校附属幼稚園主事として「誘導保育」を提唱し、日本の幼児教育の発展に貢献した。「生活を生活で生活へ」の言葉で知られる。", work:"幼稚園真諦", key:"誘導保育"},
+  {name:"ペーターゼン", country:"ドイツ", desc:"イエナ大学附属学校で、学年学級を廃止した異年齢の基幹集団（根幹学級）による合科的・協同的な学校改革プラン「イエナ・プラン」を実践した。", work:"イエナ・プラン", key:"イエナ・プラン"},
+  {name:"パーカースト", country:"アメリカ", desc:"自由と協同の原理に基づき、生徒が教師と学習課題の契約（アサインメント）を結んで実験室（ラボラトリー）で自学する「ドルトン・プラン」を創始した。", work:"ドルトン・プラン", key:"ドルトン・プラン"},
+];
+
+// --- 教育心理 ---
+const PSYCH = [
+  {term:"古典的条件づけ（レスポンデント条件づけ）", desc:"パブロフの犬の実験で知られる、中性刺激と無条件刺激を対提示することで条件反射が形成される学習。", person:"パブロフ"},
+  {term:"オペラント条件づけ", desc:"スキナー箱の実験で知られる、自発的な行動の直後に強化を与えることでその行動の生起頻度が変化する学習。", person:"スキナー"},
+  {term:"試行錯誤学習", desc:"問題箱に入れられたネコの実験から見いだされた、試行を繰り返すうちに誤反応が減り正反応が確立される学習。効果の法則で説明される。", person:"ソーンダイク"},
+  {term:"洞察学習", desc:"チンパンジーが道具を使ってバナナを取る実験から見いだされた、場面の構造を見通すことで突然解決に至る学習。", person:"ケーラー"},
+  {term:"観察学習（モデリング）", desc:"他者（モデル）の行動を観察するだけで成立する学習。ボボ人形実験で実証され、社会的学習理論の中心概念となった。", person:"バンデューラ"},
+  {term:"発達の最近接領域", desc:"子どもが独力で達成できる水準と、大人の援助や仲間との協同によって達成できる水準との間の領域。教育はこの領域に働きかけるべきとされる。", person:"ヴィゴツキー"},
+  {term:"自己実現の欲求", desc:"欲求階層説の最上位に位置づけられる欲求。生理的欲求・安全の欲求・所属と愛情の欲求・承認の欲求が満たされた上で現れるとされる。", person:"マズロー"},
+  {term:"アイデンティティ（自我同一性）の確立", desc:"心理社会的発達理論において青年期の発達課題とされるもの。これが達成されないと役割の拡散に陥るとされる。", person:"エリクソン"},
+  {term:"具体的操作期", desc:"認知発達段階説で7〜11歳ごろにあたる、保存の概念が成立し具体的な事物については論理的思考が可能になる段階。", person:"ピアジェ"},
+  {term:"ピグマリオン効果（教師期待効果）", desc:"教師が学習者に期待をもつことで、実際に学習者の成績が向上する現象。実験的に示された。", person:"ローゼンタール"},
+  {term:"ハロー効果（光背効果）", desc:"ある人物の目立った特徴に引きずられて、その他の特徴の評価までゆがめられる現象。人物評価の際の誤りの一つ。", person:"（評価の心理）"},
+  {term:"内発的動機づけ", desc:"賞罰など外部からの働きかけによらず、知的好奇心や興味・関心など活動それ自体を目的とする動機づけ。", person:"（動機づけ理論）"},
+  {term:"アンダーマイニング効果", desc:"内発的に動機づけられていた行動に外的報酬を与えると、かえって内発的動機づけが低下する現象。", person:"デシ"},
+  {term:"学習性無力感", desc:"回避不可能な嫌悪刺激を経験し続けると、「何をしても無駄だ」と学習し、自発的な行動をしなくなる現象。", person:"セリグマン"},
+  {term:"レディネス", desc:"学習が成立するために必要な心身の準備状態。成熟優位説の立場から双生児の階段のぼり実験で示された。", person:"ゲゼル"},
+  {term:"刷り込み（インプリンティング）", desc:"ハイイロガンのひなが孵化直後に見た動く対象の後を追うようになる現象。臨界期の存在を示した。", person:"ローレンツ"},
+  {term:"防衛機制：合理化", desc:"自分の失敗や満たされない欲求に対して、もっともらしい理由をつけて正当化する防衛機制。「すっぱいブドウ」の寓話が典型例。", person:"（精神分析）"},
+  {term:"防衛機制：昇華", desc:"社会的に承認されない欲求や衝動を、スポーツや芸術など社会的に認められる活動に向けて満たす防衛機制。", person:"（精神分析）"},
+  {term:"系列位置効果", desc:"単語リストの記憶で、リストの最初（初頭効果）と最後（新近効果）の項目の再生率が高くなる現象。", person:"（記憶の心理）"},
+  {term:"メタ認知", desc:"自分自身の認知活動を客観的にとらえ、監視（モニタリング）し制御（コントロール）する働き。学習方略の改善に重要とされる。", person:"フラベル"},
+  {term:"ゴーレム効果", desc:"教師が学習者に低い期待しかもたないことで、実際に学習者の成績が低下してしまう現象。教師期待効果の負の側面。", person:"（教育心理）"},
+  {term:"カクテルパーティー効果", desc:"騒がしい場所でも、自分の名前や関心のある話題は自然と聞き取れる選択的注意の現象。", person:"（認知心理）"},
+  {term:"プラトー（高原現象）", desc:"練習を続けているにもかかわらず、一時的に学習の進歩が停滞する現象。学習曲線上で水平な部分として現れる。", person:"（学習の心理）"},
+  {term:"転移", desc:"先行する学習が後の学習に影響を及ぼすこと。促進する場合を正の—、妨害する場合を負の—という。", person:"（学習の心理）"},
+  {term:"忘却曲線", desc:"無意味綴りを用いた記憶実験により、学習直後に忘却が急速に進み、その後はゆるやかになることを示した曲線。", person:"エビングハウス"},
+  {term:"ビッグ・ファイブ（特性5因子モデル）", desc:"パーソナリティを開放性・誠実性（勤勉性）・外向性・調和性（協調性）・神経症傾向の5つの特性次元でとらえるモデル。", person:"（パーソナリティ心理学）"},
+  {term:"ホーソン効果", desc:"工場での実験に由来する、周囲から注目され期待されていると意識することで作業能率や成績が向上する現象。", person:"（産業・教育心理）"},
+  {term:"中心化傾向", desc:"評定者が極端な評価を避けることで、評価が尺度の中央付近に集中してしまう人物評価の誤り。", person:"（評価の心理）"},
+  {term:"寛大化傾向", desc:"評定者が対象者に対して実際よりも甘い（高い）評価をつけてしまう人物評価の誤り。", person:"（評価の心理）"},
+  {term:"ソシオメトリック・テスト", desc:"学級内の成員相互の選択（好意）・排斥の関係を質問によって測定し、集団の人間関係の構造を把握する方法。", person:"モレノ"},
+  {term:"ゲス・フー・テスト", desc:"「クラスでいちばん〜なのはだれですか」という形式で、学級内の児童生徒の行動特徴を相互に評定させる集団測定法。", person:"（集団測定法）"},
+  {term:"実験心理学の創始（心理学実験室の創設）", desc:"1879年、ライプツィヒ大学に世界最初の心理学実験室を設立し、心理学を哲学から独立した科学として確立した。", person:"ヴント"},
+  {term:"認知地図（潜在学習）", desc:"ネズミの迷路学習実験から、報酬（強化）がなくても学習は潜在的に成立しており、頭の中に空間の地図のような認知的表象が形成されると考えた。", person:"トールマン"},
+  {term:"防衛機制：抑圧", desc:"自分にとって都合の悪い欲求や感情を無意識のうちに抑え込み、意識に上らせないようにする、防衛機制の中で最も基本的なもの。", person:"（精神分析）"},
+  {term:"ロールシャッハ・テスト", desc:"左右対称のインクのしみが何に見えるかを答えさせ、外界の刺激をどのように意味づけ反応するかからパーソナリティを把握する投影法の心理検査。", person:"（投影法検査）"},
+  {term:"個人内評価", desc:"他の児童生徒との比較ではなく、個人の中での教科・能力間の比較（横断的）や過去の成績との比較（縦断的）によって行う評価。", person:"（教育評価）"},
+  {term:"形式的操作期", desc:"認知発達段階説で11歳ごろ以降にあたる、具体的な事物を離れて抽象的・仮説演繹的な思考が可能になる最終段階。", person:"ピアジェ"},
+];
+
+// --- 教育法規（穴埋め用） ---
+// text 内の ____ が blank に置き換わる
+const LAWS = [
+  {law:"教育基本法", art:"第1条（教育の目的）", text:"教育は、{0}の完成を目指し、平和で民主的な国家及び社会の形成者として必要な資質を備えた心身ともに健康な国民の育成を期して行われなければならない。", blanks:["人格"], distract:[["個性","能力","自己"]]},
+  {law:"教育基本法", art:"第4条（教育の機会均等）", text:"すべて国民は、ひとしく、その{0}に応じた教育を受ける機会を与えられなければならず、人種、信条、性別、社会的身分、経済的地位又は門地によって、教育上差別されない。", blanks:["能力"], distract:[["適性","学力","希望"]]},
+  {law:"教育基本法", art:"第5条（義務教育）", text:"国民は、その保護する子に、別に法律で定めるところにより、{0}を受けさせる義務を負う。", blanks:["普通教育"], distract:[["義務教育","学校教育","基礎教育"]]},
+  {law:"教育基本法", art:"第9条（教員）", text:"法律に定める学校の教員は、自己の崇高な使命を深く自覚し、絶えず{0}に励み、その職責の遂行に努めなければならない。", blanks:["研究と修養"], distract:[["研修と実践","自己研鑽","修養と訓練"]]},
+  {law:"教育基本法", art:"前文", text:"我々は、この理想を実現するため、個人の尊厳を重んじ、真理と正義を希求し、{0}を尊び、豊かな人間性と創造性を備えた人間の育成を期するとともに、伝統を継承し、新しい文化の創造を目指す教育を推進する。", blanks:["公共の精神"], distract:[["自主の精神","協同の精神","勤労の精神"]]},
+  {law:"教育基本法", art:"第2条（教育の目標）", text:"幅広い知識と教養を身に付け、真理を求める態度を養い、豊かな情操と{0}を培うとともに、健やかな身体を養うこと。", blanks:["道徳心"], distract:[["公共心","倫理観","正義感"]]},
+  {law:"日本国憲法", art:"第26条第1項", text:"すべて国民は、法律の定めるところにより、その能力に応じて、ひとしく{0}を有する。", blanks:["教育を受ける権利"], distract:[["学習する権利","教育を受けさせる義務","就学する権利"]]},
+  {law:"日本国憲法", art:"第26条第2項", text:"すべて国民は、法律の定めるところにより、その保護する子女に普通教育を受けさせる義務を負ふ。{0}は、これを無償とする。", blanks:["義務教育"], distract:[["普通教育","初等教育","学校教育"]]},
+  {law:"学校教育法", art:"第11条（懲戒・体罰）", text:"校長及び教員は、教育上必要があると認めるときは、文部科学大臣の定めるところにより、児童、生徒及び学生に懲戒を加えることができる。ただし、{0}を加えることはできない。", blanks:["体罰"], distract:[["制裁","身体的苦痛","罰則"]]},
+  {law:"学校教育法", art:"第1条（学校の範囲）", text:"この法律で、学校とは、幼稚園、小学校、中学校、{0}、高等学校、中等教育学校、特別支援学校、大学及び高等専門学校とする。", blanks:["義務教育学校"], distract:[["専修学校","各種学校","幼保連携型認定こども園"]]},
+  {law:"学校教育法", art:"第35条（出席停止）", text:"市町村の教育委員会は、性行不良であって他の児童の教育に妨げがあると認める児童があるときは、その{0}に対して、児童の出席停止を命ずることができる。", blanks:["保護者"], distract:[["児童本人","校長","学級担任"]]},
+  {law:"地方公務員法", art:"第30条（服務の根本基準）", text:"すべて職員は、{0}として公共の利益のために勤務し、且つ、職務の遂行に当っては、全力を挙げてこれに専念しなければならない。", blanks:["全体の奉仕者"], distract:[["公共の奉仕者","住民の奉仕者","国民の奉仕者"]]},
+  {law:"地方公務員法", art:"第34条（秘密を守る義務）", text:"職員は、職務上知り得た{0}を漏らしてはならない。その職を退いた後も、また、同様とする。", blanks:["秘密"], distract:[["情報","個人情報","事項"]]},
+  {law:"教育公務員特例法", art:"第21条（研修）", text:"教育公務員は、その職責を遂行するために、絶えず{0}に努めなければならない。", blanks:["研究と修養"], distract:[["研修と実践","職能開発","資質向上"]]},
+  {law:"教育公務員特例法", art:"第22条（研修の機会）", text:"教員は、授業に支障のない限り、{0}の承認を受けて、勤務場所を離れて研修を行うことができる。", blanks:["本属長"], distract:[["教育委員会","任命権者","教育長"]]},
+  {law:"いじめ防止対策推進法", art:"第2条（定義）", text:"「いじめ」とは、児童等に対して、当該児童等が在籍する学校に在籍している等当該児童等と一定の人的関係にある他の児童等が行う心理的又は物理的な影響を与える行為（インターネットを通じて行われるものを含む。）であって、当該行為の対象となった児童等が{0}を感じているものをいう。", blanks:["心身の苦痛"], distract:[["精神的苦痛","身体的苦痛","深刻な被害"]]},
+  {law:"いじめ防止対策推進法", art:"第28条（重大事態）", text:"いじめにより当該学校に在籍する児童等が{0}、心身又は財産に重大な被害が生じた疑いがあると認めるとき（重大事態）は、組織を設けて調査を行うものとする。", blanks:["生命"], distract:[["名誉","人格","身体"]]},
+  {law:"児童虐待の防止等に関する法律", art:"第6条（通告義務）", text:"児童虐待を受けたと{0}児童を発見した者は、速やかに、市町村、都道府県の設置する福祉事務所若しくは児童相談所に通告しなければならない。", blanks:["思われる"], distract:[["確認した","認められる","判断した"]]},
+  {law:"学校保健安全法", art:"第19条（出席停止）", text:"{0}は、感染症にかかっており、かかっている疑いがあり、又はかかるおそれのある児童生徒等があるときは、政令で定めるところにより、出席を停止させることができる。", blanks:["校長"], distract:[["学校の設置者","教育委員会","学校医"]]},
+  {law:"学校保健安全法", art:"第20条（臨時休業）", text:"{0}は、感染症の予防上必要があるときは、臨時に、学校の全部又は一部の休業を行うことができる。", blanks:["学校の設置者"], distract:[["校長","教育委員会","保健所長"]]},
+  {law:"学校教育法施行規則", art:"第48条（職員会議）", text:"小学校には、設置者の定めるところにより、{0}の職務の円滑な執行に資するため、職員会議を置くことができる。", blanks:["校長"], distract:[["教頭","主幹教諭","教務主任"]]},
+  {law:"地方公務員法", art:"第33条（信用失墜行為の禁止）", text:"職員は、その職の{0}を傷つけ、又は職員の職全体の不名誉となるような行為をしてはならない。", blanks:["信用"], distract:[["名誉","品位","威信"]]},
+  {law:"地方公務員法", art:"第35条（職務に専念する義務）", text:"職員は、法律又は条例に特別の定がある場合を除く外、その勤務時間及び職務上の注意力のすべてをその{0}遂行のために用い、当該地方公共団体がなすべき責を有する職務にのみ従事しなければならない。", blanks:["職責"], distract:[["職務","業務","任務"]]},
+  {law:"教育基本法", art:"第10条（家庭教育）", text:"父母その他の保護者は、子の教育について{0}を有するものであって、生活のために必要な習慣を身に付けさせるとともに、自立心を育成し、心身の調和のとれた発達を図るよう努めるものとする。", blanks:["第一義的責任"], distract:[["最終的責任","直接の責任","重大な責任"]]},
+  {law:"教育基本法", art:"第14条（政治教育）", text:"良識ある公民として必要な{0}は、教育上尊重されなければならない。", blanks:["政治的教養"], distract:[["政治的判断力","政治的中立性","公民的資質"]]},
+  {law:"地方公務員法", art:"第32条（法令等及び上司の職務上の命令に従う義務）", text:"職員は、その職務を遂行するに当って、法令、条例、地方公共団体の規則及び地方公共団体の機関の定める規程に従い、且つ、{0}に忠実に従わなければならない。", blanks:["上司の職務上の命令"], distract:[["任命権者の指示","教育委員会の指導","校長の学校経営方針"]]},
+  {law:"教育公務員特例法", art:"第11条（採用及び昇任の方法）", text:"公立学校の校長の採用並びに教員の採用及び昇任は、{0}によるものとする。", blanks:["選考"], distract:[["競争試験","採用試験","人事評価"]]},
+  {law:"学校教育法施行規則", art:"第28条（表簿の保存期間）", text:"学校において備えなければならない表簿は、別に規定するもののほか、{0}保存しなければならない。ただし、指導要録及びその写しのうち入学、卒業等の学籍に関する記録については、20年間保存しなければならない。", blanks:["5年間"], distract:[["3年間","10年間","30年間"]]},
+  {law:"地方教育行政の組織及び運営に関する法律", art:"第37条（任命権者）", text:"市町村立学校職員給与負担法の規定により都道府県がその給与を負担する市町村立学校の教職員（県費負担教職員）の任命権は、{0}に属する。", blanks:["都道府県委員会"], distract:[["市町村委員会","市町村長","都道府県知事"]]},
+  {law:"教育職員等による児童生徒性暴力等の防止等に関する法律", art:"（児童生徒性暴力等の禁止）", text:"教育職員等は、{0}をしてはならない。", blanks:["児童生徒性暴力等"], distract:[["わいせつな行為等","性的な言動等","ハラスメント等"]]},
+  {law:"学校教育法", art:"第37条（副校長の職務）", text:"副校長は、校長を助け、{0}校務をつかさどる。", blanks:["命を受けて"], distract:[["校長に代わって","必要に応じて","校長の指示の下に"]]},
+  {law:"学校教育法施行規則", art:"第63条（非常変災等による臨時休業）", text:"非常変災その他急迫の事情があるときは、{0}は、臨時に授業を行わないことができる。", blanks:["校長"], distract:[["学校の設置者","教育委員会","学級担任"]]},
+  {law:"学校保健安全法", art:"第29条（危険等発生時対処要領）", text:"学校においては、児童生徒等の安全の確保を図るため、当該学校の実情に応じて、危険等発生時において当該学校の職員がとるべき措置の具体的内容及び手順を定めた{0}を作成するものとする。", blanks:["対処要領"], distract:[["学校安全計画","学校防災計画","安全管理規程"]]},
+];
+
+// 法令名当て問題用の法令リスト
+const LAW_NAMES = ["教育基本法","学校教育法","日本国憲法","地方公務員法","教育公務員特例法","いじめ防止対策推進法","児童虐待の防止等に関する法律","学校保健安全法","学校教育法施行規則","地方教育行政の組織及び運営に関する法律","教育職員等による児童生徒性暴力等の防止等に関する法律"];
+
+// --- 教育史・重要事項 ---
+const HISTORY = [
+  {event:"学制の公布", year:"1872年（明治5年）", desc:"フランスの学区制にならい全国を大学区・中学区・小学区に分けた、日本最初の近代的学校制度に関する法令。「邑に不学の戸なく家に不学の人なからしめん」を理念とした。"},
+  {event:"教育令の公布", year:"1879年（明治12年）", desc:"学制を廃止し、アメリカの制度を参考に地方の実情に合わせた自由主義的な教育制度を定めた法令。翌年改正され中央集権的な内容となった。"},
+  {event:"学校令の公布", year:"1886年（明治19年）", desc:"初代文部大臣森有礼のもとで公布された帝国大学令・師範学校令・小学校令・中学校令の総称。"},
+  {event:"教育勅語の発布", year:"1890年（明治23年）", desc:"明治天皇の名で発布され、戦前の教育の基本理念とされた。1948年に国会で排除・失効確認が決議された。"},
+  {event:"教育基本法の制定", year:"1947年（昭和22年）", desc:"日本国憲法の精神に基づき、戦後教育の基本理念を定めた法律。同年、学校教育法とともに公布され、六・三・三・四制が発足した。"},
+  {event:"教育基本法の全部改正", year:"2006年（平成18年）", desc:"制定から約60年を経て全部改正され、「公共の精神」「伝統と文化の尊重」などが新たに規定された。"},
+  {event:"寺子屋の普及", year:"江戸時代", desc:"庶民の子どもに読み・書き・そろばんを教えた民間の教育施設。師匠には僧侶・神官・浪人などがあたった。"},
+  {event:"藩校（藩学）の設立", year:"江戸時代", desc:"各藩が藩士の子弟を教育するために設けた学校。会津の日新館、水戸の弘道館、長州の明倫館などが有名。"},
+  {event:"足利学校の隆盛", year:"室町時代", desc:"下野国にあった中世最高の学府とされる教育機関。フランシスコ・ザビエルにより「坂東の大学」として西洋に紹介された。"},
+  {event:"綜芸種智院の創設", year:"平安時代（828年ごろ）", desc:"空海が京都に設けた、庶民にも門戸を開いた私立学校。"},
+  {event:"国民学校令の公布", year:"1941年（昭和16年）", desc:"小学校を国民学校と改称し、「皇国ノ道」に則った初等教育（皇国民の錬成）を目的とした戦時下の勅令。義務教育は8年とされた（実施は延期）。"},
+  {event:"臨時教育審議会の設置", year:"1984年（昭和59年）", desc:"中曽根内閣の下で内閣直属の審議会として設置され、4次にわたる答申で「個性重視の原則」「生涯学習体系への移行」「国際化・情報化への対応」を打ち出した。"},
+];
+
+// --- 生徒指導・特別支援・教育時事用語 ---
+const TERMS = [
+  {term:"生徒指導提要", desc:"生徒指導の理論・実際についての学校・教職員向け基本書。2022年の改訂で、生徒指導を「発達支持的」「課題予防的」「困難課題対応的」の重層的支援構造（2軸3類4層）で整理した。", cat:"生徒指導"},
+  {term:"スクールカウンセラー（SC）", desc:"児童生徒の心理に関して高度に専門的な知識・経験を有する者として学校に配置され、カウンセリングや教職員・保護者への助言を行う。", cat:"生徒指導"},
+  {term:"スクールソーシャルワーカー（SSW）", desc:"福祉の専門性を有する者として、児童生徒を取り巻く環境（家庭・友人関係・地域）に働きかけ、関係機関とのネットワークを活用して支援を行う。", cat:"生徒指導"},
+  {term:"インクルーシブ教育システム", desc:"障害者の権利に関する条約に基づく、障害のある者とない者が共に学ぶ仕組み。同じ場で共に学ぶことを追求するとともに、連続性のある多様な学びの場を整備する。", cat:"特別支援教育"},
+  {term:"合理的配慮", desc:"障害のある子どもが他の子どもと平等に教育を受けられるよう、学校が必要かつ適当な変更・調整を行うこと。体制面・財政面で均衡を失した又は過度の負担を課さないものとされる。", cat:"特別支援教育"},
+  {term:"通級による指導", desc:"通常の学級に在籍する障害のある児童生徒が、大部分の授業を通常の学級で受けながら、一部の時間に障害に応じた特別の指導を受ける制度。", cat:"特別支援教育"},
+  {term:"個別の教育支援計画", desc:"障害のある児童生徒について、家庭・地域・医療・福祉等の関係機関と連携し、乳幼児期から学校卒業後までの長期的な視点で一貫した支援を行うために学校が作成する計画。", cat:"特別支援教育"},
+  {term:"カリキュラム・マネジメント", desc:"教科等横断的な視点で教育内容を組織的に配列し、PDCAサイクルを確立し、人的・物的資源を効果的に活用して、教育課程に基づき学校教育の質の向上を図ること。", cat:"学習指導要領"},
+  {term:"主体的・対話的で深い学び", desc:"現行学習指導要領が授業改善の視点として掲げるもの。いわゆるアクティブ・ラーニングの視点からの授業改善を指す。", cat:"学習指導要領"},
+  {term:"社会に開かれた教育課程", desc:"よりよい学校教育を通じてよりよい社会を創るという理念を学校と社会が共有し、社会との連携・協働により実現を図るという、現行学習指導要領の理念。", cat:"学習指導要領"},
+  {term:"GIGAスクール構想", desc:"児童生徒向けの1人1台端末と高速大容量の通信ネットワークを一体的に整備し、個別最適化された学びを全国の学校現場で実現する構想。", cat:"教育時事"},
+  {term:"令和の日本型学校教育", desc:"2021年の中央教育審議会答申で示された、全ての子どもたちの可能性を引き出す「個別最適な学び」と「協働的な学び」の一体的な充実を目指す教育の姿。", cat:"教育時事"},
+  {term:"チームとしての学校", desc:"教員と多様な専門性をもつ職員（SC・SSW等）が一つのチームとして連携・協働し、組織として教育活動に取り組む体制。2015年の中教審答申で示された。", cat:"教育時事"},
+  {term:"不登校（文部科学省の定義）", desc:"何らかの心理的・情緒的・身体的あるいは社会的要因・背景により、登校しないあるいはしたくともできない状況にあるため年間30日以上欠席した者のうち、病気や経済的な理由による者を除いたもの。", cat:"生徒指導"},
+  {term:"教育機会確保法", desc:"不登校児童生徒への支援を定め、休養の必要性を認めるとともに、学校以外の場における多様で適切な学習活動の重要性を踏まえた支援を定めた2016年制定の法律。", cat:"生徒指導"},
+  {term:"懲戒と出席停止", desc:"学校教育法上、退学・停学・訓告の懲戒のうち、公立の小・中学校（義務教育）の児童生徒には退学・停学を行うことができない。一方、市町村教育委員会による出席停止は懲戒ではなく、他の児童生徒の学習権を保障するための措置である。", cat:"教育法規"},
+  {term:"COCOLOプラン", desc:"「誰一人取り残されない学びの保障に向けた不登校対策」として文部科学省が2023年3月に取りまとめたプラン。学びの多様化学校の設置促進、校内教育支援センターの設置促進、1人1台端末による心の小さなSOSの早期発見などを掲げる。", cat:"生徒指導"},
+  {term:"学びの多様化学校（いわゆる不登校特例校）", desc:"不登校児童生徒の実態に配慮して、特別の教育課程を編成して教育を実施する学校。全国300校設置を目指すとされている。", cat:"生徒指導"},
+  {term:"生命（いのち）の安全教育", desc:"「性犯罪・性暴力対策の強化の方針」を踏まえ、子供たちが性暴力の加害者・被害者・傍観者にならないよう、文部科学省が教材・指導の手引を作成して推進している教育。", cat:"教育時事"},
+  {term:"第4期教育振興基本計画", desc:"2023年6月に閣議決定された国の教育に関する総合計画。「2040年以降の社会を見据えた持続可能な社会の創り手の育成」と「日本社会に根差したウェルビーイングの向上」を総括的な基本方針（コンセプト）とする。", cat:"教育時事"},
+  {term:"人権教育の指導方法等の在り方について［第三次とりまとめ］", desc:"学校における人権教育の指導方法等について文部科学省の調査研究会議が示したもの。人権感覚の育成を重視し、人権教育を通じて育てたい資質・能力を知識的側面、価値的・態度的側面、技能的側面の3つの側面から整理した。", cat:"人権教育"},
+  {term:"こども基本法", desc:"日本国憲法及び児童の権利に関する条約の精神にのっとり、こども施策を総合的に推進することを目的として2023年4月に施行された法律。政府はこの法律に基づき「こども大綱」を定める。", cat:"教育時事"},
+  {term:"教育の情報化に関する手引", desc:"新学習指導要領の下での教育の情報化について文部科学省が示した手引。「情報教育」「教科指導におけるICT活用」「校務の情報化」の3つの側面を通して教育の質の向上を目指すとした。", cat:"教育時事"},
+  {term:"基礎的・汎用的能力", desc:"キャリア教育で育成すべき力として中央教育審議会答申が示した、「人間関係形成・社会形成能力」「自己理解・自己管理能力」「課題対応能力」「キャリアプランニング能力」の4つの能力。", cat:"キャリア教育"},
+  {term:"交流及び共同学習", desc:"障害のある子供とない子供が共に活動するもので、相互の触れ合いを通じて豊かな人間性を育む側面と、教科等のねらいの達成を目的とする側面とを、分かちがたいものとして一体的に推進するとされる取組。", cat:"特別支援教育"},
+  {term:"学校安全の3領域", desc:"学校における安全教育・安全管理が対象とする「生活安全」「交通安全」「災害安全」の3つの領域。日常生活の事故や犯罪被害は生活安全に、防災は災害安全に含まれる。", cat:"学校安全"},
+  {term:"PISA（OECD生徒の学習到達度調査）", desc:"OECDが3年ごとに実施する、義務教育修了段階の15歳児を対象とした国際的な学習到達度調査。読解力・数学的リテラシー・科学的リテラシーの3分野を測定する。", cat:"教育時事"},
+  {term:"全国学力・学習状況調査", desc:"文部科学省が小学校第6学年・中学校第3学年の原則全児童生徒を対象に毎年4月に実施する調査。国語・算数（数学）を基本とし、理科・英語は数年に一度実施される。", cat:"教育時事"},
+  {term:"学校行事の5分類", desc:"学習指導要領の特別活動に示される「儀式的行事」「文化的行事」「健康安全・体育的行事」「遠足（旅行）・集団宿泊的行事」「勤労生産・奉仕的行事」の区分。入学式・卒業式は儀式的行事に当たる。", cat:"学習指導要領"},
+  {term:"ティーム・ティーチング", desc:"複数の教師が協力して指導に当たる方式。学習内容や活動に応じて大集団・中集団・小集団・個別など学習集団を柔軟に編成できる。", cat:"学習指導要領"},
+  {term:"特別の教育課程（日本語指導）", desc:"日本語に通じない児童生徒に対し、在籍学級の教育課程の一部に替えて行う日本語指導を、学校教育法施行規則に基づき教育課程に位置付けて実施できる制度。", cat:"教育時事"},
+  {term:"教育職員免許状の種類", desc:"普通免許状・特別免許状・臨時免許状の3種類。普通免許状は全国で有効だが、特別免許状・臨時免許状は授与を受けた都道府県内のみで効力を有し、臨時免許状の有効期間は3年である。", cat:"教育法規"},
+  {term:"教育長", desc:"地方公共団体の長が議会の同意を得て直接任命する、教育委員会の会務を総理し教育委員会を代表する職。任期は3年（教育委員は4年）。2015年施行の新教育委員会制度で従来の教育委員長と一本化された。", cat:"教育法規"},
+];
+
+// --- 東京都ローカル（都の施策・条例） ---
+const TOKYO = [
+  {term:"東京都教育ビジョン（第5次）", desc:"2024年3月に策定された、2024〜2028年度の5年間に都教育委員会が取り組むべき方向性を示す東京都の教育振興基本計画。「自ら未来を切り拓く力の育成」「誰一人取り残さないきめ細かな教育の充実」「子供たちの学びを支える教職員・学校の力の強化」の3本の柱の下、12の基本的な方針を掲げる。", note:"令和7年度の都の教職教養で出題実績あり。"},
+  {term:"東京都教育施策大綱", desc:"地方教育行政の組織及び運営に関する法律に基づき、知事が総合教育会議における教育委員会との協議を経て策定した、東京都の教育施策の根本的な方針。「誰一人取り残さず、すべての子供が将来への希望を持って自ら伸び、育つ教育」を目指すことを掲げる（2021年3月策定）。", note:"知事が策定する点（教育委員会ではない）がポイント。"},
+  {term:"東京都こども基本条例", desc:"2021年4月に施行された、子供の権利条約の精神にのっとり、子供を権利の主体として尊重し、子供の最善の利益を最優先にすることなどを基本理念とする東京都の条例。", note:"国のこども基本法（2023年施行）より先に制定されている。"},
+  {term:"東京都教育委員会いじめ総合対策", desc:"いじめ防止対策推進法、東京都いじめ防止対策推進条例及び東京都いじめ防止対策推進基本方針に基づき、都教育委員会が策定した、学校・教職員が取り組むべきいじめ防止等の対策をまとめたもの。", note:"「未然防止・早期発見・早期対応・重大事態への対処」の段階で整理されている。"},
+  {term:"人権教育プログラム（学校教育編）", desc:"都教育委員会が毎年度作成し都内公立学校の全教員に配布している、人権教育の基本的な考え方や指導事例をまとめた手引。同和問題やアイヌの人々、性自認・性的指向など多様な人権課題を扱う。", note:"東京都の人権教育の中心資料。"},
+  {term:"TOKYO GLOBAL GATEWAY（TGG）", desc:"英語を使う楽しさや必要性を体感できる、東京都が設置した体験型英語学習施設。", note:"東京都教育ビジョンの「使える英語力の育成」施策とあわせて押さえる。"},
+  {term:"中学校英語スピーキングテスト（ESAT-J）", desc:"都内公立中学校の生徒を対象に実施される英語の「話すこと」の力をみるテスト。第3学年対象のテスト結果は都立高等学校入学者選抜に活用される。", note:"東京都独自の取組として頻出。"},
+  {term:"チャレンジスクール", desc:"不登校経験者や高校中途退学者などを主に受け入れる、三部制（午前・午後・夜間）の定時制・総合学科の都立高等学校。", note:"エンカレッジスクール（基礎学力の定着を図る全日制）との区別に注意。"},
+  {term:"TOKYOスマート・スクール・プロジェクト", desc:"1人1台端末などのICT環境を活用し、「教育のDX（デジタルトランスフォーメーション）」により都立学校の学びの質を高めることを目指す東京都の取組。", note:""},
+  {term:"県費負担教職員制度（東京都の場合）", desc:"区市町村立小・中学校の教職員の給与は東京都が負担し、その任命権は都教育委員会に属する一方、服務の監督は区市町村教育委員会が行う制度。", note:"「任命権者＝都教委、服務監督権者＝区市町村教委」の組み合わせが頻出。"},
+  {term:"東京都人権施策推進指針", desc:"「人権が尊重された都市・東京」の実現に向けて、東京都の人権施策の基本的な考え方と取組の方向性を示した指針。", note:"令和5年度の都の教職教養で出題実績あり。"},
+  {term:"「学びの基盤」プロジェクト", desc:"社会人として自立するための読解力及び自ら学ぶ力の向上を目的として、都立高校で実施されている東京都の取組。", note:"令和5年度の都の教職教養で出題実績あり。"},
+  {term:"東京ベーシック・ドリル", desc:"小学校段階の国語・算数等の基礎的な学習内容の確実な定着を図るため、都教育委員会が作成し、繰り返し学習に活用できるようにした教材。", note:"義務教育段階の基礎学力定着の都独自教材。"},
+  {term:"体罰防止に関するガイドライン（東京都教育委員会）", desc:"体罰や不適切な指導の具体例を示して体罰の根絶を図る都教育委員会のガイドライン。長時間の正座や起立の強制も体罰に当たり得るとされる。", note:"令和6年度の都の教職教養で出題実績あり。"},
+];
+
+/* =========================================================
+   ユーティリティ
+========================================================= */
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pickN(arr, n, excludeFn) {
+  const pool = excludeFn ? arr.filter(x => !excludeFn(x)) : arr.slice();
+  return shuffle(pool).slice(0, n);
+}
+
+/* =========================================================
+   問題ジェネレータ
+   それぞれ {category, question, choices, answer, explanation} を返す
+========================================================= */
+
+function lawFull(l) { return l.text.replace(/\{(\d)\}/g, (m, d) => l.blanks[parseInt(d)]); }
+
+// --- 人物：業績の記述 → 人物名 ---
+function qPersonDesc(p) {
+  const others = pickN(PERSONS, 3, x => x.name === p.name).map(x => x.name);
+  return {
+    field: "principle", itemKey: "person:" + p.name, category: "教育原理・人物",
+    question: `次の記述に該当する人物として最も適切なものを選びなさい。\n\n「${p.desc}」`,
+    choices: shuffle([p.name, ...others]),
+    answer: p.name,
+    explanation: `正解は ${p.name}（${p.country}）。キーワードは「${p.key}」。主著・業績：${p.work}。`
+  };
+}
+
+// --- 人物：人物名 → 主著・業績 ---
+function qPersonWork(p) {
+  if (p.work.startsWith("（")) return qPersonDesc(p);
+  const candidates = PERSONS.filter(x => !x.work.startsWith("（"));
+  const others = pickN(candidates, 3, x => x.name === p.name).map(x => x.work);
+  return {
+    field: "principle", itemKey: "person:" + p.name, category: "教育原理・人物",
+    question: `${p.name} の主著または代表的業績として最も適切なものを選びなさい。`,
+    choices: shuffle([p.work, ...others]),
+    answer: p.work,
+    explanation: `${p.name}（${p.country}）の主著・業績は「${p.work}」。${p.desc}`
+  };
+}
+
+// --- 人物：キーワード → 人物名 ---
+function qPersonKey(p) {
+  const others = pickN(PERSONS, 3, x => x.name === p.name).map(x => x.name);
+  return {
+    field: "principle", itemKey: "person:" + p.name, category: "教育原理・人物",
+    question: `「${p.key}」と最も関係の深い人物を選びなさい。`,
+    choices: shuffle([p.name, ...others]),
+    answer: p.name,
+    explanation: `正解は ${p.name}。${p.desc}`
+  };
+}
+
+// --- 法規：穴埋め ---
+function qLawBlank(l) {
+  const idx = Math.floor(Math.random() * l.blanks.length);
+  const correct = l.blanks[idx];
+  const text = l.text.replace(`{${idx}}`, "【　？　】").replace(/\{(\d)\}/g, (m, d) => l.blanks[parseInt(d)]);
+  const others = pickN(l.distract[idx], 3);
+  return {
+    field: "law", itemKey: "law:" + l.law + "|" + l.art, category: "教育法規",
+    question: `${l.law} ${l.art} の条文中の【　？　】に当てはまる語句を選びなさい。\n\n「${text}」`,
+    choices: shuffle([correct, ...others]),
+    answer: correct,
+    explanation: `正解は「${correct}」。${l.law} ${l.art}：「${lawFull(l)}」`
+  };
+}
+
+// --- 法規：条文 → 法令名 ---
+function qLawName(l) {
+  const others = pickN(LAW_NAMES, 3, x => x === l.law);
+  return {
+    field: "law", itemKey: "law:" + l.law + "|" + l.art, category: "教育法規",
+    question: `次の条文が規定されている法令として正しいものを選びなさい。\n\n「${lawFull(l)}」`,
+    choices: shuffle([l.law, ...others]),
+    answer: l.law,
+    explanation: `正解は ${l.law}（${l.art}）。`
+  };
+}
+
+// --- 心理：説明 → 用語 ---
+function qPsychTerm(p) {
+  const others = pickN(PSYCH, 3, x => x.term === p.term).map(x => x.term);
+  return {
+    field: "psych", itemKey: "psych:" + p.term, category: "教育心理",
+    question: `次の説明に該当する用語として最も適切なものを選びなさい。\n\n「${p.desc}」`,
+    choices: shuffle([p.term, ...others]),
+    answer: p.term,
+    explanation: `正解は「${p.term}」${p.person.startsWith("（") ? p.person : "（提唱者：" + p.person + "）"}。`
+  };
+}
+
+// --- 心理：用語 → 提唱者 ---
+function qPsychPerson(p) {
+  if (p.person.startsWith("（")) return qPsychTerm(p);
+  const candidates = PSYCH.filter(x => !x.person.startsWith("（"));
+  const others = pickN(candidates, 3, x => x.person === p.person).map(x => x.person);
+  return {
+    field: "psych", itemKey: "psych:" + p.term, category: "教育心理",
+    question: `「${p.term}」と最も関係の深い人物を選びなさい。`,
+    choices: shuffle([p.person, ...others]),
+    answer: p.person,
+    explanation: `正解は ${p.person}。${p.desc}`
+  };
+}
+
+// --- 教育史：説明 → 事項 or 事項 → 年代 ---
+function qHistory(h) {
+  if (Math.random() < 0.5) {
+    const others = pickN(HISTORY, 3, x => x.event === h.event).map(x => x.event);
+    return {
+      field: "history", itemKey: "history:" + h.event, category: "教育史",
+      question: `次の記述に該当する事項として最も適切なものを選びなさい。\n\n「${h.desc}」`,
+      choices: shuffle([h.event, ...others]),
+      answer: h.event,
+      explanation: `正解は「${h.event}」（${h.year}）。`
+    };
+  }
+  const uniq = [...new Set(pickN(HISTORY, 6, x => x.year === h.year || x.event === h.event).map(x => x.year))].slice(0, 3);
+  while (uniq.length < 3) {
+    const extra = pick(HISTORY).year;
+    if (extra !== h.year && !uniq.includes(extra)) uniq.push(extra);
+  }
+  return {
+    field: "history", itemKey: "history:" + h.event, category: "教育史",
+    question: `「${h.event}」が行われた時期として正しいものを選びなさい。`,
+    choices: shuffle([h.year, ...uniq]),
+    answer: h.year,
+    explanation: `正解は ${h.year}。${h.desc}`
+  };
+}
+
+// --- 時事・生徒指導用語：説明 → 用語 ---
+function qTerm(t) {
+  const others = pickN(TERMS, 3, x => x.term === t.term).map(x => x.term);
+  return {
+    field: "history", itemKey: "term:" + t.term, category: t.cat,
+    question: `次の説明に該当する語句として最も適切なものを選びなさい。\n\n「${t.desc}」`,
+    choices: shuffle([t.term, ...others]),
+    answer: t.term,
+    explanation: `正解は「${t.term}」。`
+  };
+}
+
+// --- 東京都ローカル：説明 → 施策・条例名 ---
+function qTokyo(t) {
+  const others = pickN(TOKYO, 3, x => x.term === t.term).map(x => x.term);
+  return {
+    field: "tokyo", itemKey: "tokyo:" + t.term, category: "東京都",
+    question: `東京都の教育施策等に関する次の説明に該当するものとして最も適切なものを選びなさい。\n\n「${t.desc}」`,
+    choices: shuffle([t.term, ...others]),
+    answer: t.term,
+    explanation: `正解は「${t.term}」。${t.note}`
+  };
+}
+
+// 種別 → 出題形式（同じ項目でも形式はランダムに変わる）
+const FORMATS = {
+  person:  p => pick([qPersonDesc, qPersonWork, qPersonKey])(p),
+  law:     l => pick([qLawBlank, qLawBlank, qLawName])(l),
+  psych:   p => pick([qPsychTerm, qPsychTerm, qPsychPerson])(p),
+  history: h => qHistory(h),
+  term:    t => qTerm(t),
+  tokyo:   t => qTokyo(t),
+};
+const FIELD_POOLS = {
+  principle: [["person", PERSONS]],
+  law:       [["law", LAWS]],
+  psych:     [["psych", PSYCH]],
+  history:   [["history", HISTORY], ["term", TERMS]],
+  tokyo:     [["tokyo", TOKYO]],
+};
+const FIELD_KEYS = ["principle", "law", "psych", "history", "tokyo"];
+const FIELD_NAMES = { principle: "教育原理・人物", law: "教育法規", psych: "教育心理", history: "教育史・時事用語", tokyo: "東京都" };
+
+function makeQuestion(kind, item) { return FORMATS[kind](item); }
+function randomQuestion(field) {
+  const [kind, pool] = pick(FIELD_POOLS[field]);
+  return makeQuestion(kind, pick(pool));
+}
+// 苦手リストのキー（itemKey）から元データを引く
+function itemFromKey(key) {
+  const i = key.indexOf(":");
+  const kind = key.slice(0, i), id = key.slice(i + 1);
+  const finders = {
+    person:  () => PERSONS.find(p => p.name === id),
+    law:     () => LAWS.find(l => l.law + "|" + l.art === id),
+    psych:   () => PSYCH.find(p => p.term === id),
+    history: () => HISTORY.find(h => h.event === id),
+    term:    () => TERMS.find(t => t.term === id),
+    tokyo:   () => TOKYO.find(t => t.term === id),
+  };
+  const item = finders[kind] && finders[kind]();
+  return item ? [kind, item] : null;
+}
+
+/* =========================================================
+   アプリ状態とUI
+========================================================= */
+let settings = { field: "all", count: 10 };
+let quiz = { items: [], index: 0, correct: 0, wrongList: [] };
+
+/* ----- 成績の記録（localStorage） ----- */
+const STORE_KEY = "kyoshoku_stats_v1";
+function freshStats() {
+  const fields = {};
+  FIELD_KEYS.forEach(f => fields[f] = { a: 0, w: 0 });
+  return { fields, missed: {} };  // missed: itemKey → 未克服の誤答回数
+}
+function loadStats() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (s && s.fields && s.missed) {
+      // 分野が後から追加された場合の引き継ぎ
+      FIELD_KEYS.forEach(f => { if (!s.fields[f]) s.fields[f] = { a: 0, w: 0 }; });
+      return s;
+    }
+  } catch (e) {}
+  return freshStats();
+}
+function saveStats() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(stats)); } catch (e) {}
+}
+let stats = loadStats();
+
+function recordAnswer(q, isCorrect) {
+  const f = stats.fields[q.field];
+  f.a++;
+  if (!isCorrect) {
+    f.w++;
+    stats.missed[q.itemKey] = (stats.missed[q.itemKey] || 0) + 1;
+  } else if (stats.missed[q.itemKey]) {
+    // 苦手項目に正解できたら1回ぶん克服。0になればリストから外れる
+    stats.missed[q.itemKey]--;
+    if (stats.missed[q.itemKey] <= 0) delete stats.missed[q.itemKey];
+  }
+  saveStats();
+}
+
+function resetStats() {
+  if (!confirm("これまでの成績と苦手リストを消去します。よろしいですか？")) return;
+  stats = freshStats();
+  saveStats();
+  renderStats();
+}
+
+// 誤答率の高い分野ほど選ばれやすくする（ラプラス平滑化で未演習分野もゼロにしない）
+function weightedField() {
+  const weights = FIELD_KEYS.map(f => {
+    const s = stats.fields[f];
+    return (s.w + 1) / (s.a + 2);
+  });
+  let r = Math.random() * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < FIELD_KEYS.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return FIELD_KEYS[i];
+  }
+  return FIELD_KEYS[FIELD_KEYS.length - 1];
+}
+
+function renderStats() {
+  const el = document.getElementById("stats-panel");
+  const total = Object.values(stats.fields).reduce((s, f) => s + f.a, 0);
+  if (!total) { el.innerHTML = ""; return; }
+  const missedCount = Object.keys(stats.missed).length;
+  el.innerHTML =
+    `<div class="field-label">📊 これまでの成績</div>` +
+    FIELD_KEYS.map(f => {
+      const s = stats.fields[f];
+      const pct = s.a ? Math.round(((s.a - s.w) / s.a) * 100) : null;
+      return `<div class="stat-row">
+        <span class="stat-label">${FIELD_NAMES[f]}</span>
+        <div class="stat-bar"><div style="width:${pct ?? 0}%"></div></div>
+        <span class="stat-pct">${pct === null ? "—" : pct + "%"}</span>
+      </div>`;
+    }).join("") +
+    `<p class="stat-sub">累計 ${total} 問解答 ／ 苦手リスト ${missedCount} 件${missedCount ? "（「🔥 苦手重点」で優先出題されます）" : ""}</p>` +
+    `<button class="reset-link" onclick="resetStats()">記録をリセット</button>`;
+}
+
+// 設定ボタン
+document.querySelectorAll("#field-select button").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll("#field-select button").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    settings.field = btn.dataset.val;
+  };
+});
+document.querySelectorAll("#count-select button").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll("#count-select button").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    settings.count = parseInt(btn.dataset.val);
+  };
+});
+
+function showScreen(id) {
+  ["screen-start", "screen-quiz", "screen-result"].forEach(s =>
+    document.getElementById(s).classList.toggle("hidden", s !== id));
+}
+function showStart() { renderStats(); showScreen("screen-start"); }
+
+function buildQuizItems() {
+  const items = [];
+  const seen = new Set();  // 同一セッション内での同一項目の重複出題を回避
+  const add = q => {
+    if (!q || seen.has(q.itemKey)) return;
+    seen.add(q.itemKey);
+    items.push(q);
+  };
+
+  if (settings.field === "weak") {
+    // 1) 過去に間違えた項目を、誤答回数の多い順に最大6割まで再出題
+    const missedKeys = shuffle(Object.keys(stats.missed))
+      .sort((a, b) => stats.missed[b] - stats.missed[a]);
+    const quota = Math.ceil(settings.count * 0.6);
+    for (const key of missedKeys) {
+      if (items.length >= quota) break;
+      const found = itemFromKey(key);
+      if (found) add(makeQuestion(found[0], found[1]));
+    }
+    // 2) 残りは誤答率の高い分野を重み付きで出題
+    let guard = 0;
+    while (items.length < settings.count && guard++ < 500) add(randomQuestion(weightedField()));
+    return shuffle(items);
+  }
+
+  let guard = 0;
+  while (items.length < settings.count && guard++ < 500) {
+    const field = settings.field === "all" ? pick(FIELD_KEYS) : settings.field;
+    add(randomQuestion(field));
+  }
+  return items;
+}
+
+function startQuiz() {
+  quiz = { items: buildQuizItems(), index: 0, correct: 0, wrongList: [] };
+  showScreen("screen-quiz");
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = quiz.items[quiz.index];
+  document.getElementById("q-category").textContent = q.category;
+  document.getElementById("q-progress-text").textContent = `第 ${quiz.index + 1} 問 / ${quiz.items.length} 問`;
+  document.getElementById("q-progress").style.width = `${(quiz.index / quiz.items.length) * 100}%`;
+  document.getElementById("q-text").textContent = q.question;
+  document.getElementById("q-feedback").innerHTML = "";
+
+  const box = document.getElementById("q-choices");
+  box.innerHTML = "";
+  q.choices.forEach((c, i) => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn";
+    btn.innerHTML = `<span class="choice-num">${i + 1}</span><span>${c}</span>`;
+    btn.onclick = () => answer(btn, c);
+    box.appendChild(btn);
+  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function answer(clickedBtn, choice) {
+  const q = quiz.items[quiz.index];
+  const isCorrect = choice === q.answer;
+  if (isCorrect) quiz.correct++;
+  else quiz.wrongList.push({ q, yourAnswer: choice });
+  recordAnswer(q, isCorrect);
+
+  document.querySelectorAll(".choice-btn").forEach(btn => {
+    btn.disabled = true;
+    const text = btn.querySelector("span:last-child").textContent;
+    if (text === q.answer) btn.classList.add("correct");
+    else if (btn === clickedBtn) btn.classList.add("wrong");
+    else btn.classList.add("dimmed");
+  });
+
+  const fb = document.getElementById("q-feedback");
+  const isLast = quiz.index === quiz.items.length - 1;
+  fb.innerHTML = `
+    <div class="feedback ${isCorrect ? "ok" : "ng"}">
+      <div class="verdict">${isCorrect ? "⭕ 正解！" : "❌ 不正解…"}</div>
+      <div>${q.explanation}</div>
+      ${isCorrect
+        ? (stats.missed[q.itemKey] ? `<div class="miss-note">👍 苦手項目に正解！あと ${stats.missed[q.itemKey]} 回正解で苦手リストから外れます。</div>` : "")
+        : `<div class="miss-note">📌 苦手リストに記録しました。「🔥 苦手重点」モードで優先的に再出題されます。</div>`}
+    </div>
+    <button class="next-btn" onclick="nextQuestion()">${isLast ? "結果を見る 📊" : "次の問題へ ▶"}</button>
+  `;
+}
+
+function nextQuestion() {
+  quiz.index++;
+  if (quiz.index >= quiz.items.length) showResult();
+  else renderQuestion();
+}
+
+function showResult() {
+  const total = quiz.items.length;
+  const pct = Math.round((quiz.correct / total) * 100);
+  document.getElementById("score-circle").style.setProperty("--pct", pct);
+  document.getElementById("score-pct").textContent = `${pct}%`;
+  document.getElementById("score-frac").textContent = `${quiz.correct} / ${total} 問正解`;
+
+  let msg;
+  if (pct === 100) msg = "🎉 全問正解！すばらしい！この調子で合格へ！";
+  else if (pct >= 80) msg = "💮 合格圏内です！間違えた問題を確認して完璧に。";
+  else if (pct >= 60) msg = "📖 あと一歩！弱点分野を重点的に復習しましょう。";
+  else msg = "💪 まだ伸びしろたっぷり。繰り返しが力になります！";
+  document.getElementById("result-msg").textContent = msg;
+
+  const area = document.getElementById("review-area");
+  if (quiz.wrongList.length === 0) {
+    area.innerHTML = "";
+  } else {
+    area.innerHTML = `<div class="review-title">📝 間違えた問題の復習（${quiz.wrongList.length}問）</div>` +
+      quiz.wrongList.map(w => `
+        <div class="review-item">
+          <div class="q">${w.q.question.replace(/\n/g, "<br>")}</div>
+          <div class="your">あなたの解答：${w.yourAnswer}</div>
+          <div class="a">正解：${w.q.answer}</div>
+          <div class="exp">${w.q.explanation}</div>
+        </div>`).join("");
+  }
+  showScreen("screen-result");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+renderStats();
+
+// PWA：オフラインでも使えるようにサービスワーカーを登録（https または localhost のみ）
+if ("serviceWorker" in navigator &&
+    (location.protocol === "https:" || ["localhost", "127.0.0.1"].includes(location.hostname))) {
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>

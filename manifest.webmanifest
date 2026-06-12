@@ -1,0 +1,15 @@
+{
+  "name": "教職教養 ランダム演習",
+  "short_name": "教職教養",
+  "description": "教員採用試験（教職教養）対策のランダム出題アプリ。東京都対応。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f0f4f8",
+  "theme_color": "#2c5f8d",
+  "icons": [
+    { "src": "./icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
