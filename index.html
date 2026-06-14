@@ -758,6 +758,19 @@ const FIELD_POOLS = {
 };
 const FIELD_KEYS = ["principle", "law", "psych", "history", "tokyo", "shido"];
 const FIELD_NAMES = { principle: "教育原理・人物", law: "教育法規", psych: "教育心理", history: "教育史・時事用語", tokyo: "東京都", shido: "学習指導要領" };
+// 全分野ミックス等での出題比率の重み。東京都は実試験でも25問中1問程度のため低めに設定。
+const FIELD_WEIGHT = { principle: 1, law: 1, psych: 1, history: 1, tokyo: 0.3, shido: 1 };
+
+// 重みに従って配列から1要素を選ぶ
+function weightedPick(keys, weightFn) {
+  const weights = keys.map(weightFn);
+  let r = Math.random() * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < keys.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return keys[i];
+  }
+  return keys[keys.length - 1];
+}
 
 function makeQuestion(kind, item) { return FORMATS[kind](item); }
 function randomQuestion(field) {
@@ -832,18 +845,13 @@ function resetStats() {
   renderStats();
 }
 
-// 誤答率の高い分野ほど選ばれやすくする（ラプラス平滑化で未演習分野もゼロにしない）
+// 誤答率の高い分野ほど選ばれやすくする（ラプラス平滑化で未演習分野もゼロにしない）。
+// 分野ごとの基本重み（東京都は低め）も加味する。
 function weightedField() {
-  const weights = FIELD_KEYS.map(f => {
+  return weightedPick(FIELD_KEYS, f => {
     const s = stats.fields[f];
-    return (s.w + 1) / (s.a + 2);
+    return (s.w + 1) / (s.a + 2) * FIELD_WEIGHT[f];
   });
-  let r = Math.random() * weights.reduce((a, b) => a + b, 0);
-  for (let i = 0; i < FIELD_KEYS.length; i++) {
-    r -= weights[i];
-    if (r <= 0) return FIELD_KEYS[i];
-  }
-  return FIELD_KEYS[FIELD_KEYS.length - 1];
 }
 
 function renderStats() {
@@ -915,7 +923,9 @@ function buildQuizItems() {
 
   let guard = 0;
   while (items.length < settings.count && guard++ < 500) {
-    const field = settings.field === "all" ? pick(FIELD_KEYS) : settings.field;
+    const field = settings.field === "all"
+      ? weightedPick(FIELD_KEYS, f => FIELD_WEIGHT[f])
+      : settings.field;
     add(randomQuestion(field));
   }
   return items;
